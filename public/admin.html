@@ -75,12 +75,12 @@
         <input name="to" type="email" required placeholder="user@example.com">
         <label>模板</label>
         <select name="template" onchange="applyTemplate(this.value)">
+          <option value="complaint-ack" selected>投诉受理确认</option>
           <option value="custom">自定义</option>
-          <option value="complaint-ack">投诉受理确认</option>
           <option value="blank">空白</option>
         </select>
         <label>案件编号</label>
-        <input name="case_id" placeholder="CASE-2026-0001" oninput="refreshTemplate()">
+        <input name="case_id" placeholder="TS2026062504721" oninput="refreshTemplate()">
         <label>链接基础 URL</label>
         <input name="base_url" placeholder="https://your-domain" oninput="refreshTemplate()">
         <label>主题 <span style="color:#e0413e">*</span></label>
@@ -101,7 +101,10 @@
   <div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
     <div class="modal-content">
       <button class="modal-close" onclick="closeModal()">&times;</button>
-      <h3 id="modal-title" style="margin-top:0;"></h3>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
+        <h3 id="modal-title" style="margin:0;"></h3>
+        <button id="copy-btn" onclick="copyRecord()" style="padding:6px 14px; font-size:13px; background:#2a7df0; color:#fff; border:none; border-radius:6px; cursor:pointer; white-space:nowrap;">复制</button>
+      </div>
       <pre id="modal-body"></pre>
     </div>
   </div>
@@ -113,6 +116,7 @@
     (function () {
       var t = new URLSearchParams(location.search).get('token');
       if (t) { document.getElementById('token').value = t; login(); }
+      applyTemplate('complaint-ack'); // 进页面就预填模板正文，无需手填
     })();
 
     function login() {
@@ -190,6 +194,29 @@
       document.getElementById('modal').classList.add('open');
     }
     function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+    function copyRecord() {
+      var text = document.getElementById('modal-body').textContent;
+      var btn = document.getElementById('copy-btn');
+      var done = function () {
+        var old = btn.textContent;
+        btn.textContent = '✓ 已复制';
+        btn.style.background = '#137333';
+        setTimeout(function () { btn.textContent = old; btn.style.background = '#2a7df0'; }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text, done); });
+      } else {
+        fallbackCopy(text, done);
+      }
+    }
+    function fallbackCopy(text, done) {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
 
     // --- Send email ---
@@ -203,15 +230,12 @@
         + '<p>您好！我们已收到您提交的投诉，现确认受理。</p>'
         + '<div style="background:#f7f8fa; border:1px solid #eceef2; border-radius:8px; padding:14px 18px; margin:16px 0;">'
         + '<p style="margin:4px 0;"><strong>案件编号：</strong>' + esc(caseId) + '</p>'
-        + '<p style="margin:4px 0;"><strong>受理时间：</strong>' + time + '（北京时间）</p>'
         + '</div>'
         + '<p>为加快处理进度，请点击下方按钮补充个人信息及投诉详情：</p>'
         + '<p style="text-align:center; margin:24px 0;">'
         + '<a href="' + link + '" style="display:inline-block; padding:12px 28px; background:#2a7df0; color:#fff; text-decoration:none; border-radius:8px; font-weight:600;">补充投诉信息</a>'
         + '</p>'
-        + '<p>需要补充：姓名与联系方式、投诉发生时间、投诉事项的详细说明。</p>'
         + '<p>我们将在收到补充信息后 1–3 个工作日内通过邮件反馈处理结果。</p>'
-        + '<p>此致<br><strong>服务中心</strong></p>'
         + '</div>'
         + '<p style="color:#a0a6b2; font-size:12px; margin:16px auto 0; text-align:center;">本邮件由系统自动发送，请勿直接回复。</p>'
         + '</div>';
@@ -227,7 +251,7 @@
     function refreshTemplate() {
       if (currentTpl !== 'complaint-ack') return;
       var f = document.getElementById('send-form');
-      var caseId = f.case_id.value || 'CASE-2026-0001';
+      var caseId = f.case_id.value || 'TS2026062504721';
       var baseUrl = f.base_url.value || 'https://your-domain.example';
       f.subject.value = '您的投诉已受理 — 案件编号 ' + caseId + ' — 请补充信息';
       f.html.value = tplComplaintAck(caseId, baseUrl, Date.now());

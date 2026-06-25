@@ -4,7 +4,7 @@
   "description": "A minimal website that logs visitor information (IP, request headers, browser fingerprint) to a JSON Lines file.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node --env-file=.env server.js"
   },
   "license": "MIT"
 }

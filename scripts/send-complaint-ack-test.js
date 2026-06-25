@@ -1,14 +1,11 @@
-// scripts/send-ack.js — 通过 Resend 发送投诉受理确认邮件。
-// 用法：RESEND_API_KEY=re_xxx node send-ack.js [to] [caseId] [baseUrl]
+// scripts/send-complaint-ack-test.js — 走本机的 /send-email 端点发一封完整投诉受理邮件到 hylearnai@gmail.com。
+// 用法：node scripts/send-complaint-ack-test.js [baseUrl] [caseId]
 
-const API_KEY = process.env.RESEND_API_KEY;
-if (!API_KEY) { console.error('ERROR: 请设置 RESEND_API_KEY 环境变量'); process.exit(1); }
-
-const to = process.argv[2] || 'hhonins@gmail.com';
+const baseUrl = process.argv[2] || 'https://your-domain.example';
 const caseId = process.argv[3] || 'TS2026062504721';
-const baseUrl = process.argv[4] || 'https://your-domain.example';
 const t = Date.now();
 const link = `${baseUrl}/?id=${encodeURIComponent(caseId)}&t=${t}`;
+const timeStr = new Date(t).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
 
 const html = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -33,17 +30,18 @@ const html = `<!DOCTYPE html>
 </body>
 </html>`;
 
+const payload = {
+  to: 'hylearnai@gmail.com',
+  subject: `您的投诉已受理 — 案件编号 ${caseId} — 请补充信息`,
+  html,
+};
+
 (async () => {
-  console.log(`→ Sending to ${to} (case ${caseId}) via Resend...`);
-  const res = await fetch('https://api.resend.com/emails', {
+  console.log(`→ Sending complaint-ack to ${payload.to} (case ${caseId}) via /send-email...`);
+  const res = await fetch('http://localhost:3100/send-email?token=test123', {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: 'onboarding@resend.dev',
-      to,
-      subject: `您的投诉已受理 — 案件编号 ${caseId} — 请补充信息`,
-      html,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   });
   const text = await res.text();
   console.log('Status:', res.status, res.statusText);
