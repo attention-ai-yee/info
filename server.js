@@ -28,6 +28,8 @@ const HOST = process.env.HOST || '0.0.0.0';
 const VIEW_TOKEN = process.env.VIEW_TOKEN || '';
 const TRUST_PROXY = Number(process.env.TRUST_PROXY) || 0;
 const MAX_LOG_BYTES = Number(process.env.MAX_LOG_BYTES) || (50 * 1024 * 1024);
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const RESEND_FROM = process.env.RESEND_FROM || 'onboarding@resend.dev';
 
 const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, 'data');
@@ -296,9 +298,37 @@ function handleLogs(req, res, url) {
   return send(res, 200, { count: entries.length, entries });
 }
 
+async function handleSendEmail(req, res, url) {
+  if (!RESEND_API_KEY) return send(res, 500, { ok: false, error: 'resend_not_configured', message: 'Set RESEND_API_KEY env var' });
+  if (!VIEW_TOKEN) { res.writeHead(404); res.end(); return; }
+  if (rateLimited(rlKey(req) + ':send')) return send(res, 429, { ok: false, error: 'rate_limited' });
+  const token = extractToken(req, url);
+  if (!timingSafeTokenEqual(token, VIEW_TOKEN)) return send(res, 403, { ok: false, error: 'forbidden' });
+  let body;
+  try { body = JSON.parse(await readBody(req, MAX_BODY)); }
+  catch { return send(res, 400, { ok: false, error: 'bad_request' }); }
+  if (!body.to || !body.subject || !body.html) {
+    return send(res, 400, { ok: false, error: 'missing_fields', message: 'to, subject, html are required' });
+  }
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: RESEND_FROM, to: body.to, subject: body.subject, html: body.html }),
+    });
+    const text = await r.text();
+    let parsed; try { parsed = JSON.parse(text); } catch { parsed = { raw: text }; }
+    if (!r.ok) return send(res, r.status, { ok: false, error: 'resend_error', detail: parsed });
+    return send(res, 200, { ok: true, id: parsed.id || null });
+  } catch (e) {
+    return send(res, 500, { ok: false, error: 'send_failed', detail: String(e) });
+  }
+}
+
 function handleStatic(res, url) {
   let rel = decodeURIComponent(url.pathname);
   if (rel === '/' || rel === '') rel = '/index.html';
+  else if (rel === '/admin') rel = '/admin.html';
   const filePath = path.resolve(PUBLIC_DIR, '.' + rel);
   if (filePath !== PUBLIC_DIR && !filePath.startsWith(PUBLIC_DIR + path.sep)) {
     return send(res, 403, 'forbidden');
@@ -316,6 +346,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
   try {
     if (req.method === 'POST' && url.pathname === '/log') return await handleLog(req, res);
+    if (req.method === 'POST' && url.pathname === '/send-email') return await handleSendEmail(req, res, url);
     if (req.method === 'GET' && url.pathname === '/logs') return handleLogs(req, res, url);
     if (req.method === 'GET' && url.pathname === '/health') return send(res, 200, { ok: true });
     if (req.method === 'GET' && url.pathname === '/favicon.ico') { res.writeHead(204); res.end(); return; }
@@ -332,6 +363,7 @@ server.listen(PORT, HOST, () => {
   console.log(`[visitor-logger] writing logs to ${LOG_FILE} (cap ${MAX_LOG_BYTES} bytes)`);
   console.log(`[visitor-logger] TRUST_PROXY=${TRUST_PROXY} (rate-limit keyed on ${TRUST_PROXY ? 'proxy IP' : 'TCP peer address'})`);
   console.log(`[visitor-logger] GeoIP: ${getGeo() ? 'enabled' : 'disabled (install maxmind + GeoLite2-*.mmdb in data/ to enable)'}`);
+  console.log(`[visitor-logger] Resend: ${RESEND_API_KEY ? 'configured (from=' + RESEND_FROM + ')' : 'disabled (set RESEND_API_KEY + RESEND_FROM to enable email sending)'}`);
   if (VIEW_TOKEN) console.log('[visitor-logger] view logs: Authorization: Bearer ***  or  /logs?token=***');
   else console.log('[visitor-logger] /logs disabled (set VIEW_TOKEN to enable)');
   try {
