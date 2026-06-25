@@ -1,0 +1,64 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef1f5;
+  color: #1f2330;
+  padding: 24px;
+}
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10);
+  padding: 32px;
+}
+.brand { font-size: 13px; letter-spacing: 1px; color: #8a90a0; margin-bottom: 12px; text-align: center; }
+h1 { margin: 0 0 6px; font-size: 22px; text-align: center; }
+h2 { margin: 6px 0; font-size: 20px; text-align: center; }
+.sub { margin: 0 0 22px; color: #4a5160; font-size: 14px; line-height: 1.6; text-align: center; }
+
+form { margin-top: 8px; }
+.field { margin-bottom: 14px; }
+.grid { display: flex; gap: 12px; }
+.grid .field { flex: 1; }
+label { display: block; font-size: 13px; color: #4a5160; margin-bottom: 6px; }
+.req { color: #e0413e; }
+input, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid #d7dbe2;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2330;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus, textarea:focus { border-color: #2a7df0; box-shadow: 0 0 0 3px rgba(42, 125, 240, 0.15); }
+textarea { resize: vertical; min-height: 96px; }
+.btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: #2a7df0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn:hover { background: #1f6fd6; }
+.btn:disabled { background: #9ec3f0; cursor: not-allowed; }
+.error { color: #e0413e; font-size: 13px; margin: 0 0 10px; text-align: center; }
+.hint { margin: 22px 0 0; font-size: 12px; color: #a0a6b2; text-align: center; }
+.icon { text-align: center; margin: 8px 0 4px; }
+.icon .ring { stroke: #2bb673; stroke-width: 2; }
+.icon .check { stroke: #2bb673; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }

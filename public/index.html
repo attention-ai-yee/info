@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>补充投诉信息</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="card">
+    <div class="brand">服务中心</div>
+    <h1>补充投诉信息</h1>
+    <p class="sub">为加快处理您的投诉，请填写以下信息。投诉编号可在我们发送给您的邮件中找到。</p>
+
+    <section id="form-section">
+      <form id="complaint-form" novalidate>
+        <div class="field">
+          <label for="complaint_id">投诉编号 <span class="req">*</span></label>
+          <input type="text" id="complaint_id" name="complaint_id" required placeholder="如 CASE-2026-0007">
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label for="name">姓名 <span class="req">*</span></label>
+            <input type="text" id="name" name="name" required>
+          </div>
+          <div class="field">
+            <label for="phone">联系电话 <span class="req">*</span></label>
+            <input type="tel" id="phone" name="phone" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="email">邮箱 <span class="req">*</span></label>
+          <input type="email" id="email" name="email" required>
+        </div>
+        <div class="field">
+          <label for="occurred_at">投诉发生时间</label>
+          <input type="datetime-local" id="occurred_at" name="occurred_at">
+        </div>
+        <div class="field">
+          <label for="details">进一步说明 <span class="req">*</span></label>
+          <textarea id="details" name="details" rows="5" required placeholder="请详细描述投诉事项、经过及您的诉求…"></textarea>
+        </div>
+        <p id="form-error" class="error" style="display:none"></p>
+        <button type="submit" id="submit-btn" class="btn">提交</button>
+      </form>
+    </section>
+
+    <section id="success-section" style="display:none">
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 52 52" width="56" height="56">
+          <circle cx="26" cy="26" r="25" fill="none" class="ring"/>
+          <path fill="none" d="M14 27l8 8 16-16" class="check"/>
+        </svg>
+      </div>
+      <h2>信息已提交</h2>
+      <p class="sub">感谢您的补充。案件编号 <strong id="success-id">—</strong> 的信息已记录，我们将尽快处理并通过邮件回复。</p>
+    </section>
+
+    <p class="hint">本页面由系统生成。© 服务中心</p>
+  </main>
+
+  <script>
+    // 从回信链接预填投诉编号：https://<site>/?id=CASE-2026-0007
+    (function () {
+      var p = new URLSearchParams(location.search);
+      var id = p.get('id') || p.get('case') || p.get('no');
+      if (id) document.getElementById('complaint_id').value = id;
+    })();
+
+    // 提交：把表单数据 POST 到 /log（服务端会连同 IP / 请求头一起记录）。
+    var form = document.getElementById('complaint-form');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+      var btn = document.getElementById('submit-btn');
+      btn.disabled = true; btn.textContent = '提交中…';
+      var formData = {
+        complaint_id: document.getElementById('complaint_id').value.trim(),
+        name: document.getElementById('name').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        occurred_at: document.getElementById('occurred_at').value,
+        details: document.getElementById('details').value.trim(),
+      };
+      // app.js exposes __vlSubmit, which merges the browser fingerprint into the same record.
+      var p = window.__vlSubmit
+        ? window.__vlSubmit(formData)
+        : fetch('/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'complaint_form', form: formData }), keepalive: true }).then(function (r) { return r.json(); });
+      p.then(function (j) {
+          if (j && j.ok) {
+            document.getElementById('form-section').style.display = 'none';
+            var s = document.getElementById('success-section'); s.style.display = '';
+            document.getElementById('success-id').textContent = formData.complaint_id || j.id || '—';
+          } else { throw new Error('提交失败'); }
+        })
+        .catch(function () {
+          btn.disabled = false; btn.textContent = '提交';
+          var err = document.getElementById('form-error');
+          err.style.display = ''; err.textContent = '提交失败，请稍后重试。';
+        });
+    });
+  </script>
+  <script src="/app.js" defer></script>
+</body>
+</html>

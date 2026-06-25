@@ -1,0 +1,10 @@
+{
+  "name": "visitor-logger",
+  "version": "1.0.0",
+  "description": "A minimal website that logs visitor information (IP, request headers, browser fingerprint) to a JSON Lines file.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT"
+}
