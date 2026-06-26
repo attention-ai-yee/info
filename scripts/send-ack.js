@@ -28,11 +28,11 @@ const html = `<!DOCTYPE html>
     <div style="background:#f7f8fa; border:1px solid #eceef2; border-radius:8px; padding:14px 18px; margin:16px 0;">
       <p style="margin:4px 0;"><strong>案件编号：</strong>${caseId}</p>
     </div>
-    <p style="margin:16px 0; line-height:1.7;">为加快处理进度，请点击下方按钮补充个人信息及投诉详情：</p>
+    <p style="margin:16px 0; line-height:1.7;">为加快处理进度，请点击下方按钮补充信息及投诉详情：</p>
     <p style="text-align:center; margin:24px 0;">
       <a href="${link}" style="display:inline-block; padding:12px 28px; background:#2a7df0; color:#fff; text-decoration:none; border-radius:8px; font-weight:600;">补充投诉信息</a>
     </p>
-    <p style="margin:16px 0; line-height:1.7;">我们将在收到补充信息后 1–3 个工作日内通过邮件反馈处理结果。如有疑问，请直接回复本邮件并注明案件编号。</p>
+    <p style="margin:16px 0; line-height:1.7;">我们将在收到补充信息后 1–3 个工作日内通过邮件反馈处理结果。</p>
   </div>
   <p style="color:#a0a6b2; font-size:12px; margin:16px auto 0; text-align:center;">本邮件由系统自动发送，请勿直接回复。</p>
 </div>
