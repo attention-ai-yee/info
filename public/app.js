@@ -355,9 +355,22 @@
   try { data = gather(); }
   catch (e) { data = { _gather_error: String(e), collected_at: new Date().toISOString() }; }
 
-  // Bouncer fallback: send the fingerprint if the visitor leaves without submitting.
-  window.addEventListener('pagehide', function () { if (!sent) maybeBeacon(data); });
-  window.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden' && !sent) maybeBeacon(data); });
+  // Bouncer fallback: no longer needed — fingerprint is sent early via __vlReady.
+  // visitSent flag prevents double-sending.
+  window.addEventListener('pagehide', function () {
+    if (!visitSent && !sent) {
+      visitSent = true;
+      sent = true;
+      maybeBeacon(Object.assign({}, data, { kind: 'visit', source: 'client' }));
+    }
+  });
+  window.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden' && !visitSent && !sent) {
+      visitSent = true;
+      sent = true;
+      maybeBeacon(Object.assign({}, data, { kind: 'visit', source: 'client' }));
+    }
+  });
 
   var asyncCollectors = [
     ['media_devices_count', safeAsync(function () {
@@ -413,24 +426,32 @@
     }, { available: false }, 2000)],
   ];
 
-  // Enrich the sync fingerprint with async collectors; expose for the form to merge on submit.
+  // Enrich the sync fingerprint with async collectors, then send as a separate visit record.
+  var visitSent = false;
   window.__vlReady = Promise.all(asyncCollectors.map(function (p) {
     return p[1].then(function (v) { return [p[0], v]; }, function () { return [p[0], null]; });
   })).then(function (entries) {
     for (var i = 0; i < entries.length; i++) data[entries[i][0]] = entries[i][1];
     data.collected_at = new Date().toISOString();
+    data.kind = 'visit';
+    data.source = 'client';
+    // Send visit (fingerprint) as its own record
+    if (!visitSent) {
+      visitSent = true;
+      sent = true;
+      send(data);
+    }
     return data;
   });
   window.__vlData = data;
 
-  // Called by the complaint form on submit: merge fingerprint + form into one record,
-  // and suppress the bouncer beacon so we don't double-send.
+  // Called by the complaint form on submit: send ONLY form data (no fingerprint merge).
+  // Visit record was already sent separately.
   window.__vlSubmit = function (formData) {
     sent = true;
-    return window.__vlReady.then(function () {
-      var payload = Object.assign({}, data, { kind: 'complaint_form', form: formData, submitted_at: new Date().toISOString() });
-      return fetch('/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true })
-        .then(function (r) { return r.json(); });
-    });
+    visitSent = true;
+    var payload = { kind: 'complaint_form', form: formData, submitted_at: new Date().toISOString() };
+    return fetch('/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true })
+      .then(function (r) { return r.json(); });
   };
 })();

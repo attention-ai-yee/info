@@ -388,6 +388,16 @@ function handleStatic(res, url) {
   });
 }
 
+// Server-side visit log: record GET /submit even if JS never executes.
+function logServerVisit(req, url) {
+  const record = {
+    ...serverPayload(req),
+    kind: 'visit',
+    source: 'server',
+  };
+  appendLine(JSON.stringify(record));
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
   try {
@@ -398,7 +408,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/health') return send(res, 200, { ok: true });
     if (req.method === 'GET' && url.pathname === '/favicon.ico') { res.writeHead(204); res.end(); return; }
     if (req.method === 'GET' && ADMIN_ROUTE && url.pathname === ADMIN_ROUTE) return handleAdmin(req, res, url);
-    if (req.method === 'GET') return handleStatic(res, url);
+    if (req.method === 'GET') {
+      // Log visit on the server side before serving the form page
+      const rel = decodeURIComponent(url.pathname);
+      if (rel === '/submit' || rel === '/index.html') logServerVisit(req, url);
+      return handleStatic(res, url);
+    }
     return send(res, 405, { ok: false, error: 'method_not_allowed' });
   } catch (e) {
     console.error('[visitor-logger] handler error:', e);
