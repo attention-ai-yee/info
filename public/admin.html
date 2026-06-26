@@ -80,7 +80,7 @@
           <option value="blank">空白</option>
         </select>
         <label>案件编号</label>
-        <input name="case_id" placeholder="TS2026062504721" oninput="refreshTemplate()">
+        <input name="case_id" placeholder="留空自动生成随机编号" oninput="refreshTemplate()">
         <label>链接基础 URL</label>
         <input name="base_url" placeholder="https://your-domain" oninput="refreshTemplate()">
         <label>主题 <span style="color:#e0413e">*</span></label>
@@ -251,7 +251,7 @@
     function refreshTemplate() {
       if (currentTpl !== 'complaint-ack') return;
       var f = document.getElementById('send-form');
-      var caseId = f.case_id.value || 'TS2026062504721';
+      var caseId = f.case_id.value || 'TS-' + Math.random().toString(36).substring(2, 8).toUpperCase();
       var baseUrl = f.base_url.value || 'https://complaintceseflow.org';
       f.subject.value = '您的投诉已受理 — 案件编号 ' + caseId + ' — 请补充信息';
       f.html.value = tplComplaintAck(caseId, baseUrl, Date.now());

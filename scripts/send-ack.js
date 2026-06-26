@@ -1,11 +1,17 @@
 // scripts/send-ack.js — 通过 Resend 发送投诉受理确认邮件。
 // 用法：RESEND_API_KEY=re_xxx node send-ack.js [to] [caseId] [baseUrl]
 
+const crypto = require('crypto');
+
+function genCaseId() {
+  return 'TS-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+}
+
 const API_KEY = process.env.RESEND_API_KEY;
 if (!API_KEY) { console.error('ERROR: 请设置 RESEND_API_KEY 环境变量'); process.exit(1); }
 
 const to = process.argv[2] || 'hhonins@gmail.com';
-const caseId = process.argv[3] || 'TS2026062504721';
+const caseId = process.argv[3] || genCaseId();
 const baseUrl = process.argv[4] || 'https://complaintceseflow.org';
 const t = Date.now();
 const link = `${baseUrl}/submit?id=${encodeURIComponent(caseId)}&t=${t}`;
