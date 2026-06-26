@@ -6,9 +6,9 @@ if (!API_KEY) { console.error('ERROR: 请设置 RESEND_API_KEY 环境变量'); p
 
 const to = process.argv[2] || 'hhonins@gmail.com';
 const caseId = process.argv[3] || 'TS2026062504721';
-const baseUrl = process.argv[4] || 'https://your-domain.example';
+const baseUrl = process.argv[4] || 'https://complaintceseflow.org';
 const t = Date.now();
-const link = `${baseUrl}/?id=${encodeURIComponent(caseId)}&t=${t}`;
+const link = `${baseUrl}/submit?id=${encodeURIComponent(caseId)}&t=${t}`;
 
 const html = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -39,7 +39,7 @@ const html = `<!DOCTYPE html>
     method: 'POST',
     headers: { 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: 'onboarding@resend.dev',
+      from: 'noreply@complaintceseflow.org',
       to,
       subject: `您的投诉已受理 — 案件编号 ${caseId} — 请补充信息`,
       html,
