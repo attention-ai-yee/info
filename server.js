@@ -347,7 +347,9 @@ function handleAdmin(req, res, url) {
 
 function handleStatic(res, url) {
   let rel = decodeURIComponent(url.pathname);
-  if (rel === '/' || rel === '') rel = '/index.html';
+  // Root path returns 404 — form is at /submit
+  if (rel === '/' || rel === '') { res.writeHead(404); res.end(); return; }
+  if (rel === '/submit') rel = '/index.html';
   // Block direct access to admin.html — must go through protected ADMIN_PATH
   if (rel === '/admin' || rel === '/admin.html') {
     res.writeHead(404); res.end(); return;
