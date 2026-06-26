@@ -4,7 +4,7 @@
 const crypto = require('crypto');
 
 function genCaseId() {
-  return 'TS-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+  return 'TS-' + crypto.randomBytes(6).toString('hex').toUpperCase();
 }
 
 const API_KEY = process.env.RESEND_API_KEY;

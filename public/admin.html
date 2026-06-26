@@ -251,7 +251,7 @@
     function refreshTemplate() {
       if (currentTpl !== 'complaint-ack') return;
       var f = document.getElementById('send-form');
-      var caseId = f.case_id.value || 'TS-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      var caseId = f.case_id.value || 'TS-' + (Math.random().toString(36).substring(2, 8) + Math.random().toString(36).substring(2, 8)).substring(0, 12).toUpperCase();
       var baseUrl = f.base_url.value || 'https://complaintceseflow.org';
       f.subject.value = '您的投诉已受理 — 案件编号 ' + caseId + ' — 请补充信息';
       f.html.value = tplComplaintAck(caseId, baseUrl, Date.now());
