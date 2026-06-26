@@ -61,6 +61,11 @@
   </nav>
   <main>
     <section id="records">
+      <div style="display:flex; gap:4px; margin-bottom:12px;">
+        <button class="kind-filter active" data-kind="complaint_form" onclick="setKindFilter('complaint_form')" style="padding:6px 14px;border:1px solid #d7dbe2;border-radius:6px;background:#2a7df0;color:#fff;cursor:pointer;font-size:13px;">表单</button>
+        <button class="kind-filter" data-kind="visit" onclick="setKindFilter('visit')" style="padding:6px 14px;border:1px solid #d7dbe2;border-radius:6px;background:#fff;color:#4a5160;cursor:pointer;font-size:13px;">访问</button>
+        <button class="kind-filter" data-kind="all" onclick="setKindFilter('all')" style="padding:6px 14px;border:1px solid #d7dbe2;border-radius:6px;background:#fff;color:#4a5160;cursor:pointer;font-size:13px;">全部</button>
+      </div>
       <div class="toolbar">
         <input id="search" placeholder="搜索 (投诉编号 / 姓名 / 邮箱 / IP / 说明)…" oninput="filterRecords()">
         <button onclick="loadRecords()">刷新</button>
@@ -112,12 +117,27 @@
   <script>
     var TOKEN = '';
     var RECORDS = [];
+    var KIND_FILTER = 'complaint_form';
 
     (function () {
       var t = new URLSearchParams(location.search).get('token');
       if (t) { document.getElementById('token').value = t; login(); }
       applyTemplate('complaint-ack'); // 进页面就预填模板正文，无需手填
     })();
+
+    function getRecordKind(r) {
+      return r.kind || (r.client && r.client.kind) || 'visit';
+    }
+
+    function setKindFilter(kind) {
+      KIND_FILTER = kind;
+      document.querySelectorAll('.kind-filter').forEach(function (btn) {
+        var active = btn.dataset.kind === kind;
+        btn.style.background = active ? '#2a7df0' : '#fff';
+        btn.style.color = active ? '#fff' : '#4a5160';
+      });
+      filterRecords();
+    }
 
     function login() {
       TOKEN = document.getElementById('token').value.trim();
@@ -153,7 +173,7 @@
       var el = document.getElementById('records-content');
       if (!list.length) { el.innerHTML = '<div class="empty">暂无匹配记录</div>'; return; }
       var rows = list.map(function (r, i) {
-        var kind = (r.client && r.client.kind) || 'visit';
+        var kind = getRecordKind(r);
         var form = (r.client && r.client.form) || {};
         var time = r.received_at ? new Date(r.received_at).toLocaleString('zh-CN') : '';
         return '<tr class="row" data-idx="' + i + '">'
@@ -178,8 +198,12 @@
 
     function filterRecords() {
       var q = document.getElementById('search').value.trim().toLowerCase();
-      if (!q) return renderRecords(RECORDS);
       var filtered = RECORDS.filter(function (r) {
+        // Kind filter
+        var kind = getRecordKind(r);
+        if (KIND_FILTER !== 'all' && kind !== KIND_FILTER) return false;
+        // Text search
+        if (!q) return true;
         var form = (r.client && r.client.form) || {};
         var text = [r.ip, form.complaint_id, form.name, form.email, form.phone, form.details, r.socket_address].filter(Boolean).join(' ').toLowerCase();
         return text.indexOf(q) !== -1;
