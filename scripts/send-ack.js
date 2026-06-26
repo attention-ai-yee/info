@@ -48,5 +48,7 @@ const html = `<!DOCTYPE html>
   const text = await res.text();
   console.log('Status:', res.status, res.statusText);
   console.log('Body:', text);
-  process.exit(res.ok ? 0 : 1);
+  // Force exit to avoid Windows libuv cleanup crash
+  process.exitCode = res.ok ? 0 : 1;
+  setTimeout(() => process.exit(process.exitCode), 100).unref();
 })();
