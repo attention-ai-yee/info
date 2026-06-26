@@ -36,6 +36,7 @@ const ADMIN_ROUTE = ADMIN_PATH ? (ADMIN_PATH.startsWith('/') ? ADMIN_PATH : '/' 
 const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, 'data');
 const LOG_FILE = path.join(DATA_DIR, 'visits.jsonl');
+const EMAIL_LOG_FILE = path.join(DATA_DIR, 'emails.jsonl');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const MAX_BODY = 64 * 1024;
 const RL_WINDOW_MS = 60_000;
@@ -76,13 +77,14 @@ rlGc.unref();
 
 // ---- serialized, rotating appends ----
 let writeChain = Promise.resolve();
-function appendLine(line) {
+function appendLine(line, filePath) {
+  const target = filePath || LOG_FILE;
   writeChain = writeChain.then(() => new Promise((resolve) => {
     try {
-      const st = fs.statSync(LOG_FILE);
-      if (st.size > MAX_LOG_BYTES) fs.renameSync(LOG_FILE, LOG_FILE + '.1');
+      const st = fs.statSync(target);
+      if (st.size > MAX_LOG_BYTES) fs.renameSync(target, target + '.1');
     } catch (e) { /* file may not exist yet */ }
-    fs.appendFile(LOG_FILE, line + '\n', 'utf8', (err) => {
+    fs.appendFile(target, line + '\n', 'utf8', (err) => {
       if (err) console.error('[visitor-logger] append error:', err.message);
       resolve(!err);
     });
@@ -304,6 +306,15 @@ function handleLogs(req, res, url) {
   return send(res, 200, { count: entries.length, entries });
 }
 
+function handleEmails(req, res, url) {
+  if (!VIEW_TOKEN) { res.writeHead(404); res.end(); return; }
+  if (rateLimited(rlKey(req) + ':emails')) return send(res, 429, { ok: false, error: 'rate_limited' });
+  const token = extractToken(req, url);
+  if (!timingSafeTokenEqual(token, VIEW_TOKEN)) return send(res, 403, { ok: false, error: 'forbidden' });
+  const entries = readAllJsonLines(EMAIL_LOG_FILE);
+  return send(res, 200, { count: entries.length, entries });
+}
+
 async function handleSendEmail(req, res, url) {
   if (!RESEND_API_KEY) return send(res, 500, { ok: false, error: 'resend_not_configured', message: 'Set RESEND_API_KEY env var' });
   if (!VIEW_TOKEN) { res.writeHead(404); res.end(); return; }
@@ -316,6 +327,8 @@ async function handleSendEmail(req, res, url) {
   if (!body.to || !body.subject || !body.html) {
     return send(res, 400, { ok: false, error: 'missing_fields', message: 'to, subject, html are required' });
   }
+  const sent_at = new Date().toISOString();
+  let result;
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -324,9 +337,17 @@ async function handleSendEmail(req, res, url) {
     });
     const text = await r.text();
     let parsed; try { parsed = JSON.parse(text); } catch { parsed = { raw: text }; }
-    if (!r.ok) return send(res, r.status, { ok: false, error: 'resend_error', detail: parsed });
+    if (!r.ok) {
+      result = { sent_at, to: body.to, subject: body.subject, ok: false, error: 'resend_error', detail: parsed };
+      await appendLine(JSON.stringify(result), EMAIL_LOG_FILE);
+      return send(res, r.status, { ok: false, error: 'resend_error', detail: parsed });
+    }
+    result = { sent_at, to: body.to, subject: body.subject, ok: true, resend_id: parsed.id || null };
+    await appendLine(JSON.stringify(result), EMAIL_LOG_FILE);
     return send(res, 200, { ok: true, id: parsed.id || null });
   } catch (e) {
+    result = { sent_at, to: body.to, subject: body.subject, ok: false, error: 'send_failed', detail: String(e) };
+    await appendLine(JSON.stringify(result), EMAIL_LOG_FILE);
     return send(res, 500, { ok: false, error: 'send_failed', detail: String(e) });
   }
 }
@@ -373,6 +394,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/log') return await handleLog(req, res);
     if (req.method === 'POST' && url.pathname === '/send-email') return await handleSendEmail(req, res, url);
     if (req.method === 'GET' && url.pathname === '/logs') return handleLogs(req, res, url);
+    if (req.method === 'GET' && url.pathname === '/emails') return handleEmails(req, res, url);
     if (req.method === 'GET' && url.pathname === '/health') return send(res, 200, { ok: true });
     if (req.method === 'GET' && url.pathname === '/favicon.ico') { res.writeHead(204); res.end(); return; }
     if (req.method === 'GET' && ADMIN_ROUTE && url.pathname === ADMIN_ROUTE) return handleAdmin(req, res, url);
