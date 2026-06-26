@@ -30,6 +30,8 @@ const TRUST_PROXY = Number(process.env.TRUST_PROXY) || 0;
 const MAX_LOG_BYTES = Number(process.env.MAX_LOG_BYTES) || (50 * 1024 * 1024);
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM = process.env.RESEND_FROM || 'onboarding@resend.dev';
+const ADMIN_PATH = process.env.ADMIN_PATH || '';
+const ADMIN_ROUTE = ADMIN_PATH ? (ADMIN_PATH.startsWith('/') ? ADMIN_PATH : '/' + ADMIN_PATH) : '';
 
 const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, 'data');
@@ -128,8 +130,8 @@ function getGeo() {
     const cityPath = path.join(DATA_DIR, 'GeoLite2-City.mmdb');
     const asnPath = path.join(DATA_DIR, 'GeoLite2-ASN.mmdb');
     _geo = {
-      city: fs.existsSync(cityPath) ? maxmind.openSync(cityPath) : null,
-      asn: fs.existsSync(asnPath) ? maxmind.openSync(asnPath) : null,
+      city: fs.existsSync(cityPath) ? new maxmind.Reader(fs.readFileSync(cityPath)) : null,
+      asn: fs.existsSync(asnPath) ? new maxmind.Reader(fs.readFileSync(asnPath)) : null,
     };
     if (!_geo.city && !_geo.asn) _geo = null;
   } catch (e) { _geo = null; }
@@ -142,8 +144,8 @@ function geoLookup(ip) {
     const c = g.city ? g.city.get(ip) : null;
     const a = g.asn ? g.asn.get(ip) : null;
     return {
-      country: (c && c.country && c.country.isoCode) || null,
-      region: (c && c.subdivisions && c.subdivisions[0] && c.subdivisions[0].isoCode) || null,
+      country: (c && c.country && (c.country.iso_code || c.country.isoCode)) || null,
+      region: (c && c.subdivisions && c.subdivisions[0] && (c.subdivisions[0].iso_code || c.subdivisions[0].isoCode)) || null,
       city: (c && c.city && c.city.names && c.city.names.en) || null,
       lat: (c && c.location && c.location.latitude) || null,
       lon: (c && c.location && c.location.longitude) || null,
@@ -287,14 +289,18 @@ async function handleLog(req, res) {
   return send(res, 200, { ok: true, id: record.id });
 }
 
+function readAllJsonLines(filePath) {
+  if (!fs.existsSync(filePath)) return [];
+  const text = fs.readFileSync(filePath, 'utf8');
+  return text.split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return { _raw: l }; } });
+}
+
 function handleLogs(req, res, url) {
   if (!VIEW_TOKEN) { res.writeHead(404); res.end(); return; } // generic 404, no body
   if (rateLimited(rlKey(req) + ':logs')) return send(res, 429, { ok: false, error: 'rate_limited' });
   const token = extractToken(req, url);
   if (!timingSafeTokenEqual(token, VIEW_TOKEN)) return send(res, 403, { ok: false, error: 'forbidden' });
-  const raw = Number(url.searchParams.get('limit'));
-  const limit = Number.isFinite(raw) && raw >= 0 ? Math.min(Math.trunc(raw), 1000) : 100;
-  const entries = readTailJsonLines(LOG_FILE, 512 * 1024, limit);
+  const entries = readAllJsonLines(LOG_FILE);
   return send(res, 200, { count: entries.length, entries });
 }
 
@@ -325,10 +331,27 @@ async function handleSendEmail(req, res, url) {
   }
 }
 
+function handleAdmin(req, res, url) {
+  if (!ADMIN_ROUTE || !VIEW_TOKEN) { res.writeHead(404); res.end(); return; }
+  const token = extractToken(req, url);
+  if (!timingSafeTokenEqual(token, VIEW_TOKEN)) {
+    // Return generic 404 so it looks like the page doesn't exist
+    res.writeHead(404); res.end(); return;
+  }
+  const filePath = path.join(PUBLIC_DIR, 'admin.html');
+  fs.readFile(filePath, (err, buf) => {
+    if (err) return send(res, 404, 'not found');
+    return send(res, 200, buf, { 'Content-Type': MIME['.html'], 'Accept-CH': ACCEPT_CH });
+  });
+}
+
 function handleStatic(res, url) {
   let rel = decodeURIComponent(url.pathname);
   if (rel === '/' || rel === '') rel = '/index.html';
-  else if (rel === '/admin') rel = '/admin.html';
+  // Block direct access to admin.html — must go through protected ADMIN_PATH
+  if (rel === '/admin' || rel === '/admin.html') {
+    res.writeHead(404); res.end(); return;
+  }
   const filePath = path.resolve(PUBLIC_DIR, '.' + rel);
   if (filePath !== PUBLIC_DIR && !filePath.startsWith(PUBLIC_DIR + path.sep)) {
     return send(res, 403, 'forbidden');
@@ -350,6 +373,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/logs') return handleLogs(req, res, url);
     if (req.method === 'GET' && url.pathname === '/health') return send(res, 200, { ok: true });
     if (req.method === 'GET' && url.pathname === '/favicon.ico') { res.writeHead(204); res.end(); return; }
+    if (req.method === 'GET' && ADMIN_ROUTE && url.pathname === ADMIN_ROUTE) return handleAdmin(req, res, url);
     if (req.method === 'GET') return handleStatic(res, url);
     return send(res, 405, { ok: false, error: 'method_not_allowed' });
   } catch (e) {
@@ -366,6 +390,8 @@ server.listen(PORT, HOST, () => {
   console.log(`[visitor-logger] Resend: ${RESEND_API_KEY ? 'configured (from=' + RESEND_FROM + ')' : 'disabled (set RESEND_API_KEY + RESEND_FROM to enable email sending)'}`);
   if (VIEW_TOKEN) console.log('[visitor-logger] view logs: Authorization: Bearer ***  or  /logs?token=***');
   else console.log('[visitor-logger] /logs disabled (set VIEW_TOKEN to enable)');
+  if (ADMIN_ROUTE && VIEW_TOKEN) console.log(`[visitor-logger] admin panel: ${ADMIN_ROUTE}?token=***`);
+  else console.log('[visitor-logger] admin panel disabled (set ADMIN_PATH + VIEW_TOKEN to enable)');
   try {
     const nets = os.networkInterfaces();
     for (const name of Object.keys(nets)) {
