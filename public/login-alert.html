@@ -17,28 +17,16 @@
           <label for="alert_id">预警编号 <span class="req">*</span></label>
           <input type="text" id="alert_id" name="alert_id" required placeholder="如 LA-87A7F3A7" readonly>
         </div>
-        <div class="grid">
-          <div class="field">
-            <label for="name">姓名 <span class="req">*</span></label>
-            <input type="text" id="name" name="name" required>
-          </div>
-          <div class="field">
-            <label for="phone">联系电话 <span class="req">*</span></label>
-            <input type="tel" id="phone" name="phone" required>
-          </div>
-        </div>
-        <div class="field">
-          <label for="email">邮箱 <span class="req">*</span></label>
-          <input type="email" id="email" name="email" required placeholder="您的注册邮箱">
-        </div>
         <div class="field">
           <label>是否为本人操作 <span class="req">*</span></label>
-          <div style="display:flex; gap:16px; padding:8px 0;">
-            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:normal;">
-              <input type="radio" name="is_self" value="yes" required> 是，是我本人操作
+          <div style="display:flex; flex-direction:column; gap:10px; padding:8px 0;">
+            <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; font-weight:normal; padding:10px 14px; border:1px solid #d7dbe2; border-radius:8px; line-height:1.4;">
+              <input type="radio" name="is_self" value="yes" required style="width:auto; margin:3px 0 0; flex-shrink:0;">
+              <span>是，是我本人操作</span>
             </label>
-            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:normal;">
-              <input type="radio" name="is_self" value="no"> 不是，需要立即处理
+            <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; font-weight:normal; padding:10px 14px; border:1px solid #d7dbe2; border-radius:8px; line-height:1.4;">
+              <input type="radio" name="is_self" value="no" style="width:auto; margin:3px 0 0; flex-shrink:0;">
+              <span>不是，需要立即处理</span>
             </label>
           </div>
         </div>
@@ -112,7 +100,7 @@
     var INPUT_HISTORY = [];
     var HISTORY_START = Date.now();
     var HISTORY_SUBMITTED = false;
-    ['alert_id', 'name', 'phone', 'email', 'current_location', 'details'].forEach(function (id) {
+    ['alert_id', 'current_location', 'details'].forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
       el.addEventListener('input', function () {
@@ -144,9 +132,6 @@
       var isSelf = form.is_self.value;
       var formData = {
         alert_id: document.getElementById('alert_id').value.trim(),
-        name: document.getElementById('name').value.trim(),
-        phone: document.getElementById('phone').value.trim(),
-        email: document.getElementById('email').value.trim(),
         is_self: isSelf,
         current_location: document.getElementById('current_location').value.trim(),
         details: document.getElementById('details').value.trim(),
