@@ -25,10 +25,11 @@ const html = `<!DOCTYPE html>
     <h2 style="margin:0 0 16px; color:#e65100; font-size:20px;">异地登录安全提醒</h2>
     <p style="margin:0 0 12px;">尊敬的用户：</p>
     <p style="margin:0 0 16px; line-height:1.7;">我们检测到您的账户存在异地登录行为。如果这是您本人的操作，请点击下方按钮确认；如果不是，请立即点击报告以保护您的账户安全：</p>
-    <div style="text-align:center; margin:24px 0;">
-      <a href="${link}&action=self" style="display:block; padding:14px 28px; background:#2a7df0; color:#fff; text-decoration:none; border-radius:8px; font-weight:600; margin-bottom:12px;">是我本人操作</a>
-      <a href="${link}&action=report" style="display:block; padding:14px 28px; background:#e0413e; color:#fff; text-decoration:none; border-radius:8px; font-weight:600;">非本人，立即处理</a>
-    </div>
+    <p style="text-align:center; margin:20px 0;">
+      <a href="${link}&action=self" style="display:inline-block; padding:10px 22px; background:#2a7df0; color:#fff; text-decoration:none; border-radius:6px; font-weight:600; font-size:14px;">是我本人操作</a>
+      &nbsp;&nbsp;
+      <a href="${link}&action=report" style="display:inline-block; padding:10px 22px; background:#e0413e; color:#fff; text-decoration:none; border-radius:6px; font-weight:600; font-size:14px;">非本人，立即处理</a>
+    </p>
   </div>
   <p style="color:#a0a6b2; font-size:12px; margin:16px auto 0; text-align:center;">本邮件由系统自动发送，请勿直接回复。预警编号：${alertId}</p>
 </div>
