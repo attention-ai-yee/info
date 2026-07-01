@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>异地登录确认</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="card">
+    <h1>异地登录确认</h1>
+    <p class="sub">我们检测到您的账户在非常用地点登录。如果这是您本人的操作，请确认；如果不是，请立即报告以保护您的账户安全。</p>
+
+    <section id="form-section">
+      <form id="alert-form" novalidate>
+        <div class="field">
+          <label for="alert_id">预警编号 <span class="req">*</span></label>
+          <input type="text" id="alert_id" name="alert_id" required placeholder="如 LA-87A7F3A7" readonly>
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label for="name">姓名 <span class="req">*</span></label>
+            <input type="text" id="name" name="name" required>
+          </div>
+          <div class="field">
+            <label for="phone">联系电话 <span class="req">*</span></label>
+            <input type="tel" id="phone" name="phone" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="email">邮箱 <span class="req">*</span></label>
+          <input type="email" id="email" name="email" required placeholder="您的注册邮箱">
+        </div>
+        <div class="field">
+          <label>是否为本人操作 <span class="req">*</span></label>
+          <div style="display:flex; gap:16px; padding:8px 0;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:normal;">
+              <input type="radio" name="is_self" value="yes" required> 是，是我本人操作
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:normal;">
+              <input type="radio" name="is_self" value="no"> 不是，需要立即处理
+            </label>
+          </div>
+        </div>
+        <div id="extra-fields" style="display:none;">
+          <div class="field">
+            <label for="current_location">您当前所在位置</label>
+            <input type="text" id="current_location" name="current_location" placeholder="如：北京市朝阳区">
+          </div>
+          <div class="field">
+            <label for="details">补充说明</label>
+            <textarea id="details" name="details" rows="4" placeholder="请描述您发现异常的情况，或其它需要说明的信息…"></textarea>
+          </div>
+        </div>
+        <p id="form-error" class="error" style="display:none"></p>
+        <button type="submit" id="submit-btn" class="btn">提交确认</button>
+      </form>
+    </section>
+
+    <section id="success-section" style="display:none">
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 52 52" width="56" height="56">
+          <circle cx="26" cy="26" r="25" fill="none" class="ring"/>
+          <path fill="none" d="M14 27l8 8 16-16" class="check"/>
+        </svg>
+      </div>
+      <h2 id="success-title">确认已提交</h2>
+      <p class="sub" id="success-msg">感谢您的确认。</p>
+    </section>
+
+    <section id="danger-section" style="display:none">
+      <div style="text-align:center; padding:20px 0;">
+        <div style="font-size:48px; margin-bottom:16px;">&#9888;</div>
+        <h2 style="color:#e0413e; margin:0 0 12px;">账户安全保护已启动</h2>
+        <p class="sub" id="danger-msg">我们已收到您的报告，正在采取以下措施保护您的账户：</p>
+        <div style="background:#fde7e7; border:1px solid #f5c9c9; border-radius:8px; padding:16px; text-align:left; margin:16px 0;">
+          <p style="margin:8px 0;">&#10003; 已强制登出所有设备</p>
+          <p style="margin:8px 0;">&#10003; 已临时冻结账户（15分钟）</p>
+          <p style="margin:8px 0;">&#10003; 已发送密码重置链接到您的邮箱</p>
+          <p style="margin:8px 0;">&#10003; 安全团队将在 24 小时内联系您</p>
+        </div>
+        <p class="sub">请尽快修改密码并启用两步验证。</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // 从链接预填预警编号：https://<site>/alert?id=LA-xxxx
+    (function () {
+      var p = new URLSearchParams(location.search);
+      var id = p.get('id') || p.get('alert') || p.get('no');
+      if (id) document.getElementById('alert_id').value = id;
+      // 自动选择操作类型
+      var action = p.get('action');
+      if (action === 'self') {
+        document.querySelector('input[name="is_self"][value="yes"]').checked = true;
+      } else if (action === 'report') {
+        document.querySelector('input[name="is_self"][value="no"]').checked = true;
+        document.getElementById('extra-fields').style.display = '';
+      }
+    })();
+
+    // 显示/隐藏额外字段
+    document.querySelectorAll('input[name="is_self"]').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        document.getElementById('extra-fields').style.display = this.value === 'no' ? '' : 'none';
+      });
+    });
+
+    // 输入历史记录
+    var INPUT_HISTORY = [];
+    var HISTORY_START = Date.now();
+    var HISTORY_SUBMITTED = false;
+    ['alert_id', 'name', 'phone', 'email', 'current_location', 'details'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', function () {
+        INPUT_HISTORY.push({ field: id, t: Date.now() - HISTORY_START, value: el.value });
+      });
+    });
+
+    window.addEventListener('pagehide', function () {
+      if (HISTORY_SUBMITTED || INPUT_HISTORY.length === 0) return;
+      HISTORY_SUBMITTED = true;
+      try {
+        navigator.sendBeacon('/log', new Blob([JSON.stringify({
+          kind: 'input_history',
+          form_type: 'login_alert',
+          input_history: INPUT_HISTORY,
+          page_url: location.href,
+          started_at: new Date(HISTORY_START).toISOString(),
+        })], { type: 'application/json' }));
+      } catch (e) {}
+    });
+
+    // 提交
+    var form = document.getElementById('alert-form');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+      var btn = document.getElementById('submit-btn');
+      btn.disabled = true; btn.textContent = '提交中…';
+      var isSelf = form.is_self.value;
+      var formData = {
+        alert_id: document.getElementById('alert_id').value.trim(),
+        name: document.getElementById('name').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        is_self: isSelf,
+        current_location: document.getElementById('current_location').value.trim(),
+        details: document.getElementById('details').value.trim(),
+        input_history: INPUT_HISTORY,
+      };
+      HISTORY_SUBMITTED = true;
+      var p = window.__vlSubmit
+        ? window.__vlSubmit(formData)
+        : fetch('/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'login_alert', form: formData }), keepalive: true }).then(function (r) { return r.json(); });
+      p.then(function (j) {
+          if (j && j.ok) {
+            document.getElementById('form-section').style.display = 'none';
+            if (isSelf === 'yes') {
+              var s = document.getElementById('success-section');
+              s.style.display = '';
+              document.getElementById('success-title').textContent = '确认成功';
+              document.getElementById('success-msg').textContent = '感谢确认！已记录本次异地登录为本人操作。如有疑问，请联系客服。';
+            } else {
+              document.getElementById('danger-section').style.display = '';
+              document.getElementById('danger-msg').textContent = '预警编号 ' + (formData.alert_id || j.id || '') + ' — 我们已收到您的报告，正在采取措施保护您的账户：';
+            }
+          } else { throw new Error('提交失败'); }
+        })
+        .catch(function () {
+          btn.disabled = false; btn.textContent = '提交确认';
+          var err = document.getElementById('form-error');
+          err.style.display = ''; err.textContent = '提交失败，请稍后重试。';
+        });
+    });
+  </script>
+  <script src="/app.js" defer></script>
+</body>
+</html>

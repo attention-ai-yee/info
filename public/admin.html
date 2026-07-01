@@ -81,13 +81,24 @@
         <label>模板</label>
         <select name="template" onchange="applyTemplate(this.value)">
           <option value="complaint-ack" selected>投诉受理确认</option>
+          <option value="login-alert">异地登录提醒</option>
           <option value="custom">自定义</option>
           <option value="blank">空白</option>
         </select>
-        <label>案件编号</label>
-        <input name="case_id" placeholder="留空自动生成随机编号" oninput="refreshTemplate()">
+        <label id="case_id_label">案件编号</label>
+        <input name="case_id" id="case_id_input" placeholder="留空自动生成随机编号" oninput="refreshTemplate()">
         <label>链接基础 URL</label>
         <input name="base_url" placeholder="https://your-domain" oninput="refreshTemplate()">
+        <div id="login-alert-fields" style="display:none; grid-column: 1 / -1; background:#f7f8fa; border:1px solid #eceef2; border-radius:8px; padding:14px 18px; margin:4px 0;">
+          <div style="display:grid; grid-template-columns: 130px 1fr; gap:12px 16px; align-items:center;">
+            <label style="font-size:13px; color:#4a5160;">登录地点</label>
+            <input name="login_location" placeholder="如：广东省广州市" oninput="refreshTemplate()">
+            <label style="font-size:13px; color:#4a5160;">IP 地址</label>
+            <input name="login_ip" placeholder="如：123.45.67.89" oninput="refreshTemplate()">
+            <label style="font-size:13px; color:#4a5160;">登录设备</label>
+            <input name="login_device" placeholder="如：Windows 10 / Chrome 120" oninput="refreshTemplate()">
+          </div>
+        </div>
         <label>主题 <span style="color:#e0413e">*</span></label>
         <input name="subject" required placeholder="您的投诉已受理 — 案件编号 ...">
         <label>正文 (HTML) <span style="color:#e0413e">*</span></label>
@@ -265,20 +276,84 @@
         + '</div>';
     }
 
+    function tplLoginAlert(alertId, baseUrl, loginInfo) {
+      var link = baseUrl + '/alert?id=' + encodeURIComponent(alertId);
+      var loginTime = loginInfo.time || new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+      var loginLocation = loginInfo.location || '未知地点';
+      var loginIp = loginInfo.ip || '未知IP';
+      var loginDevice = loginInfo.device || '未知设备';
+      return '<div style="font-family: system-ui, -apple-system, PingFang SC, Microsoft YaHei, sans-serif; max-width:600px; margin:0 auto; padding:32px 24px; color:#1f2330;">'
+        + '<div style="background:#fff; border-radius:12px; padding:32px; box-shadow:0 4px 16px rgba(0,0,0,.06);">'
+        + '<div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">'
+        + '<div style="width:48px; height:48px; background:#fff3e0; border-radius:50%; display:flex; align-items:center; justify-content:center;">'
+        + '<span style="font-size:24px;">&#9888;</span>'
+        + '</div>'
+        + '<h2 style="margin:0; color:#e65100;">异地登录安全提醒</h2>'
+        + '</div>'
+        + '<p>尊敬的用户：</p>'
+        + '<p>我们检测到您的账户在以下非常用地点登录：</p>'
+        + '<div style="background:#fff3e0; border:1px solid #ffe0b2; border-radius:8px; padding:14px 18px; margin:16px 0;">'
+        + '<p style="margin:4px 0;"><strong>登录时间：</strong>' + esc(loginTime) + '</p>'
+        + '<p style="margin:4px 0;"><strong>登录地点：</strong>' + esc(loginLocation) + '</p>'
+        + '<p style="margin:4px 0;"><strong>IP 地址：</strong>' + esc(loginIp) + '</p>'
+        + '<p style="margin:4px 0;"><strong>登录设备：</strong>' + esc(loginDevice) + '</p>'
+        + '</div>'
+        + '<p>如果这是您本人的操作，请点击下方按钮确认。如果不是，请立即点击按钮报告以保护您的账户安全：</p>'
+        + '<p style="text-align:center; margin:24px 0;">'
+        + '<a href="' + link + '&action=self" style="display:inline-block; padding:12px 28px; background:#2a7df0; color:#fff; text-decoration:none; border-radius:8px; font-weight:600; margin-right:12px;">是我本人操作</a>'
+        + '<a href="' + link + '&action=report" style="display:inline-block; padding:12px 28px; background:#e0413e; color:#fff; text-decoration:none; border-radius:8px; font-weight:600;">非本人，立即处理</a>'
+        + '</p>'
+        + '<p style="color:#e65100; font-weight:600;">如果非本人操作，我们建议您：</p>'
+        + '<ul style="margin:8px 0; padding-left:20px;">'
+        + '<li>立即修改密码</li>'
+        + '<li>启用两步验证</li>'
+        + '<li>检查账户活动记录</li>'
+        + '</ul>'
+        + '</div>'
+        + '<p style="color:#a0a6b2; font-size:12px; margin:16px auto 0; text-align:center;">本邮件由系统自动发送，请勿直接回复。预警编号：' + esc(alertId) + '</p>'
+        + '</div>';
+    }
+
     var currentTpl = 'custom';
     function applyTemplate(name) {
       currentTpl = name;
       var f = document.getElementById('send-form');
+      // Toggle login-alert-specific fields
+      var laf = document.getElementById('login-alert-fields');
+      var cl = document.getElementById('case_id_label');
+      var ci = document.getElementById('case_id_input');
+      if (name === 'login-alert') {
+        laf.style.display = '';
+        cl.textContent = '预警编号';
+        ci.placeholder = '留空自动生成，如 LA-XXXXXXXX';
+      } else {
+        laf.style.display = 'none';
+        cl.textContent = '案件编号';
+        ci.placeholder = '留空自动生成随机编号';
+      }
       if (name === 'blank') { f.subject.value = ''; f.html.value = ''; return; }
       refreshTemplate();
     }
     function refreshTemplate() {
-      if (currentTpl !== 'complaint-ack') return;
+      if (currentTpl !== 'complaint-ack' && currentTpl !== 'login-alert') return;
       var f = document.getElementById('send-form');
-      var caseId = f.case_id.value || 'TS-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-      var baseUrl = f.base_url.value || 'https://complaintceseflow.org';
-      f.subject.value = '您的投诉已受理 — 案件编号 ' + caseId + ' — 请补充信息';
-      f.html.value = tplComplaintAck(caseId, baseUrl, Date.now());
+      if (currentTpl === 'complaint-ack') {
+        var caseId = f.case_id.value || 'TS-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        var baseUrl = f.base_url.value || 'https://complaintceseflow.org';
+        f.subject.value = '您的投诉已受理 — 案件编号 ' + caseId + ' — 请补充信息';
+        f.html.value = tplComplaintAck(caseId, baseUrl, Date.now());
+      } else if (currentTpl === 'login-alert') {
+        var alertId = f.case_id.value || 'LA-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        var baseUrl = f.base_url.value || 'https://complaintceseflow.org';
+        var loginInfo = {
+          time: new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+          location: f.login_location.value.trim() || '未知地点',
+          ip: f.login_ip.value.trim() || '未知IP',
+          device: f.login_device.value.trim() || '未知设备'
+        };
+        f.subject.value = '安全提醒 — 检测到异地登录 — 预警编号 ' + alertId;
+        f.html.value = tplLoginAlert(alertId, baseUrl, loginInfo);
+      }
     }
 
     function previewHtml() {

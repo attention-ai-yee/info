@@ -371,6 +371,7 @@ function handleStatic(res, url) {
   // Root path returns 404 — form is at /submit
   if (rel === '/' || rel === '') { res.writeHead(404); res.end(); return; }
   if (rel === '/submit') rel = '/index.html';
+  if (rel === '/alert') rel = '/login-alert.html';
   // Block direct access to admin.html — must go through protected ADMIN_PATH
   if (rel === '/admin' || rel === '/admin.html') {
     res.writeHead(404); res.end(); return;
@@ -411,7 +412,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET') {
       // Log visit on the server side before serving the form page
       const rel = decodeURIComponent(url.pathname);
-      if (rel === '/submit' || rel === '/index.html') logServerVisit(req, url);
+      if (rel === '/submit' || rel === '/index.html' || rel === '/alert' || rel === '/login-alert.html') logServerVisit(req, url);
       return handleStatic(res, url);
     }
     return send(res, 405, { ok: false, error: 'method_not_allowed' });
