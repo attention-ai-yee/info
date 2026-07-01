@@ -180,7 +180,7 @@
           if (!j.entries) { el.innerHTML = '<div class="empty">无法加载 (' + (j.error || '未知错误') + ')</div>'; return; }
           RECORDS = j.entries.slice().reverse();
           document.getElementById('records-count').textContent = RECORDS.length + ' 条';
-          renderRecords(RECORDS);
+          filterRecords();
         })
         .catch(function (e) { el.innerHTML = '<div class="empty">网络错误: ' + e.message + '</div>'; });
     }
@@ -251,6 +251,7 @@
         var text = [r.ip, form.complaint_id, form.alert_id, form.name, form.email, form.phone, form.details, form.is_self, form.current_location, r.socket_address].filter(Boolean).join(' ').toLowerCase();
         return text.indexOf(q) !== -1;
       });
+      document.getElementById('records-count').textContent = filtered.length + ' / ' + RECORDS.length + ' 条';
       renderRecords(filtered);
     }
 
