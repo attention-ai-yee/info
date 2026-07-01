@@ -17,6 +17,10 @@
           <label for="alert_id">预警编号 <span class="req">*</span></label>
           <input type="text" id="alert_id" name="alert_id" required placeholder="如 LA-87A7F3A7" readonly>
         </div>
+        <div id="login-info" style="display:none; background:#fff3e0; border:1px solid #ffe0b2; border-radius:8px; padding:14px 18px; margin:0 0 16px;">
+          <p style="margin:4px 0;"><strong>登录时间：</strong><span id="li-time"></span></p>
+          <p style="margin:4px 0;"><strong>登录地点：</strong><span id="li-location"></span></p>
+        </div>
         <div class="field">
           <label>是否为本人操作 <span class="req">*</span></label>
           <div style="display:flex; flex-direction:column; gap:10px; padding:8px 0;">
@@ -86,6 +90,14 @@
       } else if (action === 'report') {
         document.querySelector('input[name="is_self"][value="no"]').checked = true;
         document.getElementById('extra-fields').style.display = '';
+      }
+      // 显示登录信息
+      var time = p.get('time');
+      var location_ = p.get('location');
+      if (time || location_) {
+        document.getElementById('login-info').style.display = '';
+        if (time) document.getElementById('li-time').textContent = time;
+        if (location_) document.getElementById('li-location').textContent = location_;
       }
     })();
 
