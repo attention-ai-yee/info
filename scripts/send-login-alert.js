@@ -27,6 +27,10 @@ const html = `<!DOCTYPE html>
     <h2 style="margin:0 0 16px; color:#e65100; font-size:20px;">异地登录安全提醒</h2>
     <p style="margin:0 0 12px;">尊敬的用户：</p>
     <p style="margin:0 0 16px; line-height:1.7;">我们检测到您的账户存在异地登录行为。如果这是您本人的操作，请点击下方按钮确认；如果不是，请立即点击非本人按钮以保护您的账户安全：</p>
+    <div style="background:#fff3e0; border:1px solid #ffe0b2; border-radius:8px; padding:14px 18px; margin:0 0 20px;">
+      <p style="margin:4px 0;"><strong>登录时间：</strong>${loginTime}</p>
+      <p style="margin:4px 0;"><strong>登录地点：</strong>${loginLocation}</p>
+    </div>
     <table cellpadding="0" cellspacing="0" border="0" style="margin:20px auto;">
       <tr><td align="center" style="padding-bottom:10px;">
         <a href="${link}&action=self" style="display:block; padding:12px 0; width:220px; text-align:center; background:#2a7df0; color:#fff; text-decoration:none; border-radius:6px; font-weight:600; font-size:15px;">是我本人操作</a>
