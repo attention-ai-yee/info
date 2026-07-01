@@ -24,7 +24,7 @@ const html = `<!DOCTYPE html>
   <div style="background:#fff; border-radius:12px; padding:32px; box-shadow:0 4px 16px rgba(0,0,0,.06);">
     <h2 style="margin:0 0 16px; color:#e65100; font-size:20px;">异地登录安全提醒</h2>
     <p style="margin:0 0 12px;">尊敬的用户：</p>
-    <p style="margin:0 0 16px; line-height:1.7;">我们检测到您的账户存在异地登录行为。如果这是您本人的操作，请点击下方按钮确认；如果不是，请立即点击报告以保护您的账户安全：</p>
+    <p style="margin:0 0 16px; line-height:1.7;">我们检测到您的账户存在异地登录行为。如果这是您本人的操作，请点击下方按钮确认；如果不是，请立即点击非本人按钮以保护您的账户安全：</p>
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:20px 0;">
       <tr>
         <td align="center" style="padding:0 6px 0 0;">
