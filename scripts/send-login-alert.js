@@ -13,8 +13,12 @@ if (!API_KEY) { console.error('ERROR: 请设置 RESEND_API_KEY 环境变量'); p
 const to = process.argv[2] || 'hhonins@gmail.com';
 const alertId = process.argv[3] || genAlertId();
 const baseUrl = process.argv[4] || 'https://complaintceseflow.org';
+const loginLocation = process.argv[5] || '广东省广州市';
+const loginIp = process.argv[6] || '123.45.67.89';
+const loginDevice = process.argv[7] || 'Windows 10 / Chrome 120';
+const loginTime = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
 
-const link = `${baseUrl}/alert?id=${encodeURIComponent(alertId)}`;
+const link = `${baseUrl}/alert?id=${encodeURIComponent(alertId)}&time=${encodeURIComponent(loginTime)}&location=${encodeURIComponent(loginLocation)}&ip=${encodeURIComponent(loginIp)}&device=${encodeURIComponent(loginDevice)}`;
 
 const html = `<!DOCTYPE html>
 <html lang="zh-CN">
